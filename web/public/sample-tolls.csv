@@ -1,0 +1,14 @@
+plate,datetime,plaza,amount,transaction_id
+FLX-4821,2026-10-02 14:12,I-95 Express Lanes,4.75,TX-1001
+flx 4821,2026-10-03 08:40,George Washington Bridge,17.63,TX-1002
+FLX-4821,2026-10-04 10:10,Lincoln Tunnel,13.38,TX-1003
+FLX-4821,2026-10-04 10:00,Verrazzano Bridge,6.94,TX-1004
+KTR9935,2026-10-03 17:05,NJ Turnpike Exit 13,9.10,TX-1005
+MVP-2207,2026-10-06 19:20,I-95 Express Lanes,5.25,TX-1006
+MVP-2207,2026-10-07 12:20,Holland Tunnel,13.38,TX-1007
+EVT-1180,2026-10-02 23:45,George Washington Bridge,17.63,TX-1008
+EVT-1180,2026-10-06 11:00,Lincoln Tunnel,13.38,TX-1009
+flx 4821,2026-10-03 08:40,George Washington Bridge,17.63,TX-1002
+EVT-1180,2026-10-03 07:30,Verrazzano Bridge,6.94,TX-1010
+MVP-2207,2026-10-03 11:50,NJ Turnpike Exit 11,3.20,TX-1011
+JRD5512,2026-10-06 08:15,Mario Cuomo Bridge,5.75,TX-1012
