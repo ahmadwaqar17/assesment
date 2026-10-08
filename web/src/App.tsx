@@ -1,122 +1,104 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useState } from 'react';
+import { buildChargeDrafts, chargedFingerprints } from './domain/charges';
+import type { Outcome } from './domain/types';
+import { ApprovePage } from './pages/ApprovePage';
+import { ReceiptPage } from './pages/ReceiptPage';
+import { ResultsPage } from './pages/ResultsPage';
+import { UploadPage } from './pages/UploadPage';
+import { gateway } from './payments';
+import { currentResults } from './state/reducer';
+import { StoreProvider } from './state/store';
+import { useStore } from './state/useStore';
 
-function App() {
-  const [count, setCount] = useState(0)
+type Page =
+  | { name: 'upload' }
+  | { name: 'results'; tab?: Outcome }
+  | { name: 'approve' }
+  | { name: 'receipt'; chargeId: string };
 
+const NAV: { page: Page; label: string }[] = [
+  { page: { name: 'upload' }, label: 'Upload' },
+  { page: { name: 'results' }, label: 'Results' },
+  { page: { name: 'approve' }, label: 'Approve' },
+];
+
+export default function App() {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    <StoreProvider>
+      <Shell />
+    </StoreProvider>
+  );
 }
 
-export default App
+function Shell() {
+  const { state, dispatch } = useStore();
+  const [page, setPage] = useState<Page>(state.rows.length > 0 ? { name: 'results' } : { name: 'upload' });
+  const [resetCount, setResetCount] = useState(0); // remounts pages so no stale local state survives a reset
+
+  const waitingCount = buildChargeDrafts(currentResults(state), {
+    alreadyCharged: chargedFingerprints(state.charges),
+  }).filter((d) => !state.skippedTripIds.includes(d.trip.id)).length;
+
+  function resetDemo() {
+    if (window.confirm('Reset the demo? This clears all uploads, reviews and charges and restores the seed trips.')) {
+      dispatch({ type: 'resetDemo' });
+      gateway.reset();
+      setResetCount((n) => n + 1);
+      setPage({ name: 'upload' });
+    }
+  }
+
+  const activeNav = page.name === 'receipt' ? 'approve' : page.name;
+
+  return (
+    <div className="app">
+      <header className="topbar">
+        <div className="brand">
+          <span className="brand-mark" aria-hidden="true" />
+          Toll Recovery
+        </div>
+        <nav className="nav" aria-label="Main">
+          {NAV.map((item) => (
+            <button
+              key={item.page.name}
+              className={`nav-link${activeNav === item.page.name ? ' active' : ''}`}
+              aria-current={activeNav === item.page.name ? 'page' : undefined}
+              onClick={() => setPage(item.page)}
+            >
+              {item.label}
+              {item.page.name === 'approve' && waitingCount > 0 && (
+                <span className="nav-badge" aria-label={`${waitingCount} waiting`}>
+                  {waitingCount}
+                </span>
+              )}
+            </button>
+          ))}
+        </nav>
+        <button className="button subtle" onClick={resetDemo}>
+          Reset demo
+        </button>
+      </header>
+
+      <main key={resetCount}>
+        {page.name === 'upload' && <UploadPage onImported={() => setPage({ name: 'results' })} />}
+        {page.name === 'results' && (
+          <ResultsPage
+            key={page.tab ?? 'default'}
+            initialTab={page.tab}
+            onUpload={() => setPage({ name: 'upload' })}
+            onApprove={() => setPage({ name: 'approve' })}
+          />
+        )}
+        {page.name === 'approve' && (
+          <ApprovePage
+            onReview={() => setPage({ name: 'results', tab: 'NEEDS_REVIEW' })}
+            onOpenReceipt={(chargeId) => setPage({ name: 'receipt', chargeId })}
+          />
+        )}
+        {page.name === 'receipt' && (
+          <ReceiptPage chargeId={page.chargeId} onBack={() => setPage({ name: 'approve' })} />
+        )}
+      </main>
+    </div>
+  );
+}
