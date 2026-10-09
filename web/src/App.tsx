@@ -1,122 +1,72 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useState } from 'react';
+import { Sidebar } from './components/Sidebar';
+import type { Page } from './navigation';
+import { BookingsPage } from './pages/BookingsPage';
+import { DashboardPage } from './pages/DashboardPage';
+import { FleetPage } from './pages/FleetPage';
+import { ReceiptPage } from './pages/ReceiptPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { TollsPage } from './pages/TollsPage';
+import { gateway } from './payments';
+import { dashboardSummary } from './state/selectors';
+import { StoreProvider } from './state/store';
+import { useStore } from './state/useStore';
 
-function App() {
-  const [count, setCount] = useState(0)
-
+export default function App() {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    <StoreProvider>
+      <Shell />
+    </StoreProvider>
+  );
 }
 
-export default App
+function Shell() {
+  const { state, dispatch } = useStore();
+  const [page, setPage] = useState<Page>({ name: 'dashboard' });
+  const [resetCount, setResetCount] = useState(0); // remounts pages so no stale local state survives a reset
+
+  const waitingCount = dashboardSummary(state).ready.count;
+
+  function go(next: Page) {
+    setPage(next);
+    window.scrollTo?.({ top: 0 });
+  }
+
+  function resetDemo() {
+    if (window.confirm('Reset the demo? This clears all uploads, reviews and charges and restores the seed trips.')) {
+      dispatch({ type: 'resetDemo' });
+      gateway.reset();
+      setResetCount((n) => n + 1);
+      setPage({ name: 'dashboard' });
+    }
+  }
+
+  return (
+    <div className="shell">
+      <Sidebar
+        current={page}
+        go={go}
+        tollsView={state.rows.length > 0 ? 'results' : 'upload'} // nothing imported yet: start at upload
+        tollsBadge={waitingCount}
+      />
+      <div className="workspace">
+        <div className="demo-bar" role="region" aria-label="Demo controls">
+          <span>
+            <strong>Demo mode</strong> · sample bookings and test payments. Nothing real is charged.
+          </span>
+          <button className="button small" onClick={resetDemo}>
+            Reset demo
+          </button>
+        </div>
+        <main key={resetCount}>
+        {page.name === 'dashboard' && <DashboardPage go={go} />}
+        {page.name === 'bookings' && <BookingsPage go={go} />}
+        {page.name === 'fleet' && <FleetPage />}
+        {page.name === 'settings' && <SettingsPage />}
+        {page.name === 'tolls' && <TollsPage view={page.view} tab={page.tab} waitingCount={waitingCount} go={go} />}
+        {page.name === 'receipt' && <ReceiptPage chargeId={page.chargeId} onBack={() => go(page.back)} />}
+        </main>
+      </div>
+    </div>
+  );
+}
