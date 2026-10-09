@@ -1,0 +1,12 @@
+{
+  "name": "toll-recovery",
+  "private": true,
+  "description": "Shortcuts so commands work from the repo root. The app itself lives in web/.",
+  "scripts": {
+    "postinstall": "npm --prefix web install",
+    "dev": "npm --prefix web run dev",
+    "test": "npm --prefix web test",
+    "build": "npm --prefix web run build",
+    "lint": "npm --prefix web run lint"
+  }
+}
