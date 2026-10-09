@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import sampleCsv from '../public/sample-tolls.csv?raw';
 import App from './App';
+import { openTollsView, openUpload } from './test/ui';
 
 beforeEach(() => {
   localStorage.clear();
@@ -20,6 +21,7 @@ function tab(name: RegExp) {
 describe('upload → results', () => {
   it('imports the sample statement and shows the five buckets with the right totals', async () => {
     render(<App />);
+    openUpload();
     fireEvent.click(screen.getByRole('button', { name: 'Use sample statement' }));
 
     expect(await screen.findByRole('heading', { name: 'Toll results' })).toBeTruthy();
@@ -39,21 +41,23 @@ describe('upload → results', () => {
   it('shows row errors and imports nothing when the file is invalid', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('plate,datetime,plaza,amount,transaction_id\n,soon,P,0,X')));
     render(<App />);
+    openUpload();
     fireEvent.click(screen.getByRole('button', { name: 'Use sample statement' }));
 
     const alert = await screen.findByRole('alert');
     expect(within(alert).getByText('Row 2: missing plate')).toBeTruthy();
     expect(within(alert).getByText('Row 2: unreadable date "soon" (expected YYYY-MM-DD HH:mm)')).toBeTruthy();
     expect(within(alert).getByText('Row 2: amount must be greater than $0 (got "0")')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Results' }));
+    openTollsView('Results');
     expect(screen.getByRole('heading', { name: 'No tolls yet' })).toBeTruthy();
   });
 
   it('makes every row of a second identical upload a duplicate', async () => {
     render(<App />);
+    openUpload();
     fireEvent.click(screen.getByRole('button', { name: 'Use sample statement' }));
     await screen.findByRole('heading', { name: 'Toll results' });
-    fireEvent.click(screen.getByRole('button', { name: 'Upload' }));
+    openTollsView('Upload');
     fireEvent.click(screen.getByRole('button', { name: 'Use sample statement' }));
     await screen.findByRole('heading', { name: 'Toll results' });
     // Second upload: 13 more rows, all duplicates. Charge renter is unchanged.
@@ -65,6 +69,7 @@ describe('upload → results', () => {
 describe('review', () => {
   it('resolving rows moves them to the right tab right away, updates totals and records the human decision', async () => {
     render(<App />);
+    openUpload();
     fireEvent.click(screen.getByRole('button', { name: 'Use sample statement' }));
     await screen.findByRole('heading', { name: 'Toll results' });
     fireEvent.click(tab(/Needs review/));

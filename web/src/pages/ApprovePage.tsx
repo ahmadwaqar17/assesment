@@ -1,5 +1,5 @@
 import { buildChargeDrafts, chargedFingerprints } from '../domain/charges';
-import { formatCents, parseDollarsToCents } from '../domain/money';
+import { formatCents } from '../domain/money';
 import { ChargeCard } from '../components/ChargeCard';
 import { gateway } from '../payments';
 import { chargeDraft } from '../state/chargeFlow';
@@ -8,10 +8,11 @@ import { useStore } from '../state/useStore';
 
 interface Props {
   onReview: () => void;
+  onSettings: () => void;
   onOpenReceipt: (chargeId: string) => void;
 }
 
-export function ApprovePage({ onReview, onOpenReceipt }: Props) {
+export function ApprovePage({ onReview, onSettings, onOpenReceipt }: Props) {
   const { state, dispatch } = useStore();
   const results = currentResults(state);
   const drafts = buildChargeDrafts(results, {
@@ -23,34 +24,19 @@ export function ApprovePage({ onReview, onOpenReceipt }: Props) {
   const charges = [...state.charges].reverse();
   const toReview = results.filter((r) => r.outcome === 'NEEDS_REVIEW');
 
-  function setAdminFee(text: string) {
-    const cents = parseDollarsToCents(text === '' ? '0' : text);
-    if (cents !== null && cents >= 0) dispatch({ type: 'updateSettings', settings: { adminFeeEachCents: cents } });
-  }
-
   return (
     <section className="page">
       <header className="page-header">
-        <h1>Approve charges</h1>
+        <h2>Approve charges</h2>
         <p className="muted">Nothing is charged until you say so. One card per trip; each toll can only be charged once.</p>
       </header>
 
-      <div className="panel approve-settings">
-        <label className="field">
-          <span>Admin fee per toll</span>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            defaultValue={(state.settings.adminFeeEachCents / 100).toFixed(2)}
-            onChange={(e) => setAdminFee(e.target.value)}
-            aria-describedby="admin-fee-note"
-          />
-        </label>
-        <p id="admin-fee-note" className="muted small">
-          Any admin fee must be disclosed in your rental agreement. It applies to charges you haven’t approved yet.
-        </p>
-      </div>
+      <p className="muted small">
+        Admin fee: {formatCents(state.settings.adminFeeEachCents)} per toll.{' '}
+        <button className="link-button" onClick={onSettings}>
+          Change in Settings
+        </button>
+      </p>
 
       {toReview.length > 0 && (
         <div className="notice" role="status">

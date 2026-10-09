@@ -1,26 +1,16 @@
 import { useState } from 'react';
-import { buildChargeDrafts, chargedFingerprints } from './domain/charges';
-import type { Outcome } from './domain/types';
-import { ApprovePage } from './pages/ApprovePage';
+import { Sidebar } from './components/Sidebar';
+import type { Page } from './navigation';
+import { BookingsPage } from './pages/BookingsPage';
+import { DashboardPage } from './pages/DashboardPage';
+import { FleetPage } from './pages/FleetPage';
 import { ReceiptPage } from './pages/ReceiptPage';
-import { ResultsPage } from './pages/ResultsPage';
-import { UploadPage } from './pages/UploadPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { TollsPage } from './pages/TollsPage';
 import { gateway } from './payments';
-import { currentResults } from './state/reducer';
+import { dashboardSummary } from './state/selectors';
 import { StoreProvider } from './state/store';
 import { useStore } from './state/useStore';
-
-type Page =
-  | { name: 'upload' }
-  | { name: 'results'; tab?: Outcome }
-  | { name: 'approve' }
-  | { name: 'receipt'; chargeId: string };
-
-const NAV: { page: Page; label: string }[] = [
-  { page: { name: 'upload' }, label: 'Upload' },
-  { page: { name: 'results' }, label: 'Results' },
-  { page: { name: 'approve' }, label: 'Approve' },
-];
 
 export default function App() {
   return (
@@ -32,73 +22,51 @@ export default function App() {
 
 function Shell() {
   const { state, dispatch } = useStore();
-  const [page, setPage] = useState<Page>(state.rows.length > 0 ? { name: 'results' } : { name: 'upload' });
+  const [page, setPage] = useState<Page>({ name: 'dashboard' });
   const [resetCount, setResetCount] = useState(0); // remounts pages so no stale local state survives a reset
 
-  const waitingCount = buildChargeDrafts(currentResults(state), {
-    alreadyCharged: chargedFingerprints(state.charges),
-  }).filter((d) => !state.skippedTripIds.includes(d.trip.id)).length;
+  const waitingCount = dashboardSummary(state).ready.count;
+
+  function go(next: Page) {
+    setPage(next);
+    window.scrollTo?.({ top: 0 });
+  }
 
   function resetDemo() {
     if (window.confirm('Reset the demo? This clears all uploads, reviews and charges and restores the seed trips.')) {
       dispatch({ type: 'resetDemo' });
       gateway.reset();
       setResetCount((n) => n + 1);
-      setPage({ name: 'upload' });
+      setPage({ name: 'dashboard' });
     }
   }
 
-  const activeNav = page.name === 'receipt' ? 'approve' : page.name;
-
   return (
-    <div className="app">
-      <header className="topbar">
-        <div className="brand">
-          <span className="brand-mark" aria-hidden="true" />
-          Toll Recovery
+    <div className="shell">
+      <Sidebar
+        current={page}
+        go={go}
+        tollsView={state.rows.length > 0 ? 'results' : 'upload'} // nothing imported yet: start at upload
+        tollsBadge={waitingCount}
+      />
+      <div className="workspace">
+        <div className="demo-bar" role="region" aria-label="Demo controls">
+          <span>
+            <strong>Demo mode</strong> · sample bookings and test payments. Nothing real is charged.
+          </span>
+          <button className="button small" onClick={resetDemo}>
+            Reset demo
+          </button>
         </div>
-        <nav className="nav" aria-label="Main">
-          {NAV.map((item) => (
-            <button
-              key={item.page.name}
-              className={`nav-link${activeNav === item.page.name ? ' active' : ''}`}
-              aria-current={activeNav === item.page.name ? 'page' : undefined}
-              onClick={() => setPage(item.page)}
-            >
-              {item.label}
-              {item.page.name === 'approve' && waitingCount > 0 && (
-                <span className="nav-badge" aria-label={`${waitingCount} waiting`}>
-                  {waitingCount}
-                </span>
-              )}
-            </button>
-          ))}
-        </nav>
-        <button className="button subtle" onClick={resetDemo}>
-          Reset demo
-        </button>
-      </header>
-
-      <main key={resetCount}>
-        {page.name === 'upload' && <UploadPage onImported={() => setPage({ name: 'results' })} />}
-        {page.name === 'results' && (
-          <ResultsPage
-            key={page.tab ?? 'default'}
-            initialTab={page.tab}
-            onUpload={() => setPage({ name: 'upload' })}
-            onApprove={() => setPage({ name: 'approve' })}
-          />
-        )}
-        {page.name === 'approve' && (
-          <ApprovePage
-            onReview={() => setPage({ name: 'results', tab: 'NEEDS_REVIEW' })}
-            onOpenReceipt={(chargeId) => setPage({ name: 'receipt', chargeId })}
-          />
-        )}
-        {page.name === 'receipt' && (
-          <ReceiptPage chargeId={page.chargeId} onBack={() => setPage({ name: 'approve' })} />
-        )}
-      </main>
+        <main key={resetCount}>
+        {page.name === 'dashboard' && <DashboardPage go={go} />}
+        {page.name === 'bookings' && <BookingsPage go={go} />}
+        {page.name === 'fleet' && <FleetPage />}
+        {page.name === 'settings' && <SettingsPage />}
+        {page.name === 'tolls' && <TollsPage view={page.view} tab={page.tab} waitingCount={waitingCount} go={go} />}
+        {page.name === 'receipt' && <ReceiptPage chargeId={page.chargeId} onBack={() => go(page.back)} />}
+        </main>
+      </div>
     </div>
   );
 }

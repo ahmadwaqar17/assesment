@@ -29,7 +29,7 @@ export function ResultsPage({ initialTab = 'BILL_RENTER', onUpload, onApprove }:
     return (
       <section className="page">
         <div className="panel empty">
-          <h1>No tolls yet</h1>
+          <h2>No tolls yet</h2>
           <p className="muted">Upload a toll statement to see who owes each toll.</p>
           <button className="button primary" onClick={onUpload}>
             Upload a statement
@@ -47,7 +47,7 @@ export function ResultsPage({ initialTab = 'BILL_RENTER', onUpload, onApprove }:
     <section className="page">
       <header className="page-header with-action">
         <div>
-          <h1>Toll results</h1>
+          <h2>Toll results</h2>
           <p className="muted">
             {state.rows.length} rows from {state.uploads.length} upload{state.uploads.length === 1 ? '' : 's'}.
             A renter is only charged automatically when the toll falls strictly inside their trip.

@@ -23,7 +23,7 @@ export function ReceiptPage({ chargeId, onBack }: Props) {
           <h1>Receipt not found</h1>
           <p className="muted">This charge no longer exists. It may have been cleared by Reset demo.</p>
           <button className="button" onClick={onBack}>
-            Back to charges
+            Back
           </button>
         </div>
       </section>
@@ -37,7 +37,7 @@ export function ReceiptPage({ chargeId, onBack }: Props) {
     <section className="page receipt-page">
       <div className="receipt-toolbar no-print">
         <button className="button subtle" onClick={onBack}>
-          ← Back to charges
+          ← Back
         </button>
         <button className="button primary" onClick={() => window.print()}>
           Print receipt

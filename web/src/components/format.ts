@@ -12,6 +12,16 @@ export const OUTCOME_LABELS: Record<Outcome, string> = {
   DUPLICATE: 'Duplicate',
 };
 
+export const TIMEZONES = [
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Phoenix',
+  'America/Los_Angeles',
+  'America/Anchorage',
+  'Pacific/Honolulu',
+];
+
 export const STATUS_LABELS: Record<ChargeStatus, string> = {
   pending: 'Charging…',
   paid: 'Paid',

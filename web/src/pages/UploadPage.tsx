@@ -1,17 +1,8 @@
 import { useRef, useState, type DragEvent } from 'react';
 import { parseStatement } from '../domain/statement';
+import { TIMEZONES } from '../components/format';
 import { nowIso } from '../state/clock';
 import { useStore } from '../state/useStore';
-
-const TIMEZONES = [
-  'America/New_York',
-  'America/Chicago',
-  'America/Denver',
-  'America/Phoenix',
-  'America/Los_Angeles',
-  'America/Anchorage',
-  'Pacific/Honolulu',
-];
 
 const SAMPLE_URL = '/sample-tolls.csv';
 
@@ -69,31 +60,24 @@ export function UploadPage({ onImported }: Props) {
     void importFile(event.dataTransfer.files[0]);
   }
 
-  function changeTimezone(zone: string) {
-    setTimezone(zone);
-    dispatch({ type: 'updateSettings', settings: { timezone: zone } });
-  }
 
   return (
     <section className="page">
       <header className="page-header">
-        <h1>Upload a toll statement</h1>
-        <p className="muted">
-          Drop the CSV from your toll agency. Each toll is matched to the trip that had the car at that moment.
-        </p>
+        <h2>Upload a toll statement</h2>
       </header>
 
       <div className="panel upload-panel">
         <label className="field">
           <span>Statement timezone</span>
-          <select value={timezone} onChange={(e) => changeTimezone(e.target.value)}>
+          <select value={timezone} onChange={(e) => setTimezone(e.target.value)}>
             {TIMEZONES.map((zone) => (
               <option key={zone} value={zone}>
                 {zone.replace('_', ' ')}
               </option>
             ))}
           </select>
-          <small className="muted">Times on the statement are read as local time in this zone.</small>
+          <small className="muted">Times on the statement are read as local time in this zone. Your default is set in Settings.</small>
         </label>
 
         <div

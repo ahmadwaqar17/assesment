@@ -18,6 +18,23 @@ easily run up $50–150 in tolls a month. 1Now's own comparison page rates its t
 The operator uploads a toll statement. The app works out who owes each toll and lets the operator charge it
 in one click, but only after they say yes.
 
+It sits inside a demo operator dashboard for one business, "Sunset Rentals", rather than standing alone:
+
+- **Dashboard**: Carisma, the assistant, lists what needs the operator ("5 toll charges ready for your OK ·
+  $71.33", "3 tolls need your call"), each with a button that goes straight there. Below are the totals
+  recovered from renters, waiting for approval, to file with Turo, and absorbed by the operator.
+- **Bookings**: every trip shows its toll status: Paid, Ready to charge, Waiting on renter, Failed, File with
+  Turo, or tolls still to review. Each one has a receipt or next step.
+- **Fleet**: tolls per car, split into recovered, still owed, to file with Turo, in review, and absorbed.
+  Absorbed tolls are a real cost on that car.
+- **Tolls**: the workflow itself, in three steps: Upload, Results and Approve.
+- **Settings → Tolls**: the default statement timezone, the review buffer, and the admin fee.
+
+Customers, Calendar, Payouts and Carisma's own page appear in the sidebar but are disabled and labelled
+"Not in demo".
+
+The toll workflow:
+
 - **Upload** a CSV statement and pick its timezone. If any row is bad, nothing is imported and every
   problem is listed with its row number.
 - **Match**: every toll lands in exactly one bucket, with a plain-English reason:
@@ -45,24 +62,24 @@ is worse than a few seconds of review.
 Requires **Node 22.12 or newer**.
 
 ```bash
-cd web
-npm install
+npm install        # from the repo root (installs web/) or inside web/
 npm run dev        # http://localhost:5173, with seed trips and the fake payment gateway
 ```
 
 ```bash
-npm test           # 152 tests: domain rules, the sample-statement acceptance test, reducer, UI demo path
+npm test           # 171 tests: domain rules, the sample-statement acceptance test, state, and the UI
 npm run build      # type-check and production build
 npm run lint
 ```
 
 No accounts, keys or setup are needed. Payments go through a built-in fake gateway that behaves like
-Stripe test cards. Data lives in your browser; **Reset demo** (top right) restores the seed data.
+Stripe test cards. Data lives in your browser. **Reset demo**, in the yellow demo bar at the top of every
+page, restores the seed data.
 
 ## Demo walkthrough
 
-1. **Upload**: click **Use sample statement**, or drop `web/public/sample-tolls.csv`. You land on the
-   results.
+1. **Upload**: on the Dashboard, Carisma asks for a statement. Click **Upload statement**, then **Use
+   sample statement**, or drop in `web/public/sample-tolls.csv`. You land on the results.
 2. **See the buckets**: Charge renter $71.33 (7), Needs review $23.52 (3), Turo reimbursement $9.10,
    Operator expense $13.38, Duplicate $17.63. Every row shows its reason. For example, TX-1003 at
    10:10 AM goes to James, because Sarah handed the car over at 10:00.
@@ -70,7 +87,8 @@ Stripe test cards. Data lives in your browser; **Reset demo** (top right) restor
    the toll 20 minutes after Lisa's late return to Lisa, and mark the toll 10 minutes before Lisa's
    pickup as an operator expense. The tabs and totals update immediately.
 4. **Approve**: charge Sarah (**Paid**), Omar (**Waiting on renter**, copy the payment link) and Daniel
-   (**Failed: Your card was declined.**).
+   (**Failed: Your card was declined.**). Back on the Dashboard, Carisma now reports the renter who still
+   has to confirm and the failed charge. **Bookings** and **Fleet** show where every toll stands.
 5. **Try to double-charge**: double-click **Charge** on James. Only one charge is made, and his tolls
    can't be charged again.
 6. **Receipt and re-upload**: open Sarah's receipt and print it. Then upload the same sample again:
@@ -98,7 +116,7 @@ Toll times on the statement are local time without an offset, so the app reads t
 operator picks, then compares everything in UTC. For example, 11:45 PM EDT is 3:45 AM UTC the next day.
 
 **Charges** group the chargeable tolls by trip. Money is integer cents throughout. An optional admin fee
-per toll can be added; the app notes that it must be disclosed in the rental agreement. Each charge
+per toll can be set in Settings; the app notes that it must be disclosed in the rental agreement. Each charge
 carries an **idempotency key** made from the trip and the exact set of tolls. The same tolls always
 produce the same key, so a double click, a retry or a page reload mid-charge can never charge the
 renter twice. Separately, a toll that is already on a charge can never be put on another.
@@ -108,6 +126,7 @@ renter twice. Separately, a toll that is already on a charge can never be put on
 | Cut | Why |
 |---|---|
 | Login and multi-operator accounts | 1Now said to skip auth. The demo has one operator ("Sunset Rentals"). |
+| The rest of the operator app | Customers, Calendar, Payouts and Carisma's own page are shown in the sidebar for context but are disabled. Bookings and Fleet only show toll information. |
 | Live toll agency feeds (E-ZPass and others) | They need account-level agency access. A CSV upload stands in. |
 | Real Turo sync and filing Turo reimbursements | Turo has no public host API. Turo tolls are listed so the operator can file them. |
 | A real database and backend | Browser storage is enough to demo the flow. The domain code is pure TypeScript with no React, so it can move to a backend unchanged. |
@@ -134,7 +153,7 @@ web/src/
   domain/      pure TypeScript, no React: plate, money, statement (CSV), matcher (rules), charges
   data/        seed trips and the demo operator
   payments/    PaymentGateway interface and FakeGateway
-  state/       reducer, localStorage persistence, charge flow, React context
-  components/  review panel, charge card, display formatting
-  pages/       Upload, Results, Approve, Receipt
+  state/       reducer, localStorage persistence, charge flow, summaries for dashboard/bookings/fleet
+  components/  sidebar, review panel, charge card, display formatting
+  pages/       Dashboard, Bookings, Fleet, Settings, Tolls (Upload, Results, Approve), Receipt
 ```

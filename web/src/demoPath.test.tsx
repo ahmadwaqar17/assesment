@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import sampleCsv from '../public/sample-tolls.csv?raw';
 import App from './App';
+import { openSection, openTollsView, openUpload } from './test/ui';
 import type { FakeGateway } from './payments/fakeGateway';
 
 vi.mock('./payments', async () => {
@@ -27,13 +28,14 @@ const card = (name: RegExp) => screen.getByRole('article', { name });
 
 async function uploadAndResolveReviews() {
   render(<App />);
+  openUpload();
   fireEvent.click(screen.getByRole('button', { name: 'Use sample statement' }));
   await screen.findByRole('heading', { name: 'Toll results' });
   fireEvent.click(screen.getByRole('tab', { name: /Needs review/ }));
   fireEvent.click(within(screen.getByLabelText('Review row 5')).getByRole('button', { name: /Sarah Mitchell/ }));
   fireEvent.click(within(screen.getByLabelText('Review row 8')).getByRole('button', { name: /Lisa Harris/ }));
   fireEvent.click(within(screen.getByLabelText('Review row 13')).getByRole('button', { name: 'Operator expense' }));
-  fireEvent.click(within(screen.getByRole('navigation')).getByRole('button', { name: /^Approve/ }));
+  openTollsView('Approve');
 }
 
 describe('demo path', () => {
@@ -97,7 +99,11 @@ describe('demo path', () => {
 
   it('shows the admin fee on the card and the receipt', async () => {
     await uploadAndResolveReviews();
-    fireEvent.change(screen.getByLabelText('Admin fee per toll'), { target: { value: '1.50' } });
+    openSection('Settings');
+    fireEvent.change(screen.getByLabelText(/Admin fee per toll/), { target: { value: '1.50' } });
+    openSection(/^Tolls/);
+    openTollsView('Approve');
+    expect(screen.getByText(/Admin fee: \$1\.50 per toll/)).toBeTruthy();
     expect(card(/Sarah Mitchell/).textContent).toContain('3 tolls · $33.82');
     fireEvent.click(within(card(/Sarah Mitchell/)).getByRole('button', { name: 'Charge' }));
     await waitFor(() => expect(within(card(/Sarah Mitchell/)).getByText('Paid')).toBeTruthy());
@@ -113,7 +119,9 @@ describe('demo path', () => {
     await waitFor(() => expect(within(card(/Sarah Mitchell/)).getByText('Paid')).toBeTruthy());
 
     fireEvent.click(screen.getByRole('button', { name: 'Reset demo' }));
-    expect(screen.getByRole('heading', { name: 'Upload a toll statement' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeTruthy();
+    expect(screen.getByText(/Upload this month’s toll statement/)).toBeTruthy();
+    openUpload();
     expect(screen.queryByText('Previous uploads')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Use sample statement' }));
     await screen.findByRole('heading', { name: 'Toll results' });
